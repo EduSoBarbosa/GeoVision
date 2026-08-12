@@ -2,7 +2,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
-from Modules.Service.auth_service import AuthService
+from Modules.Service.auth_service import AuthService 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 

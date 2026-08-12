@@ -31,3 +31,15 @@ def test_validate_birthdate():
     assert service.validate_birthdate("2008-12-01") == (False, "idade menor que 18 anos")
     assert service.validate_birthdate("invalid-date") == (False, "data de nascimento inválida")
     assert service.validate_birthdate("2000-01-01") == (True, "idade válida")
+
+# Criar um teste para a função authenticate_user
+def test_authenticate_user():
+    pass 
+
+# Criar teste para a função hash_password
+def test_hash_password():
+    pass 
+
+# Criar teste para a função verify_password
+def test_verify_password():
+    pass
