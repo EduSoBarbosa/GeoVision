@@ -8,7 +8,8 @@ class AuthService:
     def __init__(self):
         pass
     
-    def validate_username(self, username:str) -> bool:
+    def validate_username(self, username:str) -> tuple[bool, str]:
+        '''Valida o nome de usuário fornecido.'''
         if len(username) < 3:
             return False,"username muito curto"
         elif any(not char.isalnum() for char in username):
@@ -16,7 +17,8 @@ class AuthService:
         else:
             return True,"username válido"
     
-    def validate_email_address(self, email:str) -> bool:
+    def validate_email_address(self, email:str) -> tuple[bool, str]:
+        '''Valida o formato do e-mail fornecido.'''
         try:
             validate_email(email, check_deliverability=False)
             return True,"email válido"
@@ -30,7 +32,7 @@ class AuthService:
         pass  # Aqui você pode implementar a lógica para verificar se o nome de usuário já está registrado no banco de dados
 
     def hash_password(self, password:str) -> str:
-        # Gera um salt aleatório
+        '''Gera um hash seguro para a senha fornecida'''
         salt = bcrypt.gensalt()
         # Cria o hash da senha usando o salt
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
@@ -38,10 +40,11 @@ class AuthService:
 
 
     def verify_password(self, password:str, hashed_password:str) -> bool:
-        # Verifica se a senha fornecida corresponde ao hash armazenado
+        '''Verifica se a senha fornecida corresponde ao hash armazenado'''
         return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-    def validate_password(self, password:str, password_confirm:str) -> bool:
+    def validate_password(self, password:str, password_confirm:str) -> tuple[bool, str]:
+        '''Valida a senha do usuário.'''
         if len(password) < 8:
             return False,"senha muito curta"
         elif not any(char in string.punctuation for char in password):
@@ -51,7 +54,8 @@ class AuthService:
         else:
             return True,"senha válida"
     
-    def validate_birthdate(self, birthdate:str) -> bool:
+    def validate_birthdate(self, birthdate:str) -> tuple[bool, str]:
+        '''Valida a data de nascimento do usuário.'''
         try:
             birthdate_obj = datetime.strptime(birthdate, "%Y-%m-%d").date()
             today = date.today()
@@ -64,7 +68,7 @@ class AuthService:
         except ValueError:
             return False,"data de nascimento inválida"
 
-    def authenticate_user(self, username:str, password:str, email:str) -> bool:
+    def authenticate_user(self, username:str, password:str, email:str) -> tuple[bool, str]:
         # login de usuario
         if not self.verify_username(username):
             return False,"username não encontrado"
@@ -74,7 +78,11 @@ class AuthService:
             return False,"senha incorreta"
         return True,"autenticado com sucesso"
     
-    def register_user(self, username:str, password:str, password_confirm:str, email:str, birthdate:str) -> bool:
+    def register_user(self, username:str,
+                      password:str,
+                      password_confirm:str, 
+                      email:str,
+                      birthdate:str) -> tuple[bool, str]:
         """Registra um novo usuário no sistema."""
         valido, msg = self.validate_username(username)
         if not valido:
