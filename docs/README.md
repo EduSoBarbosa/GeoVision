@@ -1,8 +1,12 @@
 # Documentação
 
-Requisitos originais preservados em requisitos.md. Estado verificável em ../ESTADO_ATUAL.md.
-Personas: estudante (conceitos e leitura do mapa), gestor (visitas e detalhes), desenvolvedor (API e cotas).
-IHC: navegação consistente, rótulos visíveis, feedback de operações e linguagem simples.
-Faltam pesquisa com usuários, auditoria de acessibilidade e testes de usabilidade.
-Histórico do projeto: Landsat 2016–2026, vegetação e estrutura urbana; stack atual segue os requisitos anexados.
-3D, Spring Boot e outros bancos não integram esta base.
+- `ARQUITETURA.md`: componentes, persistência e decisões.
+- `PLANO_ML.md`: objetivos, critérios e avaliação científica.
+- `PLANEJAMENTO.md`: entregas, prioridades e critérios de aceite.
+- `LST_API.md`: catálogo, rasters, QA, features e limites.
+- `OPERACAO.md`: configuração, diagnóstico, backup e implantação.
+- `IHC.md`: personas, decisões de interface e validação pendente.
+- `VALIDACAO.md`: resultados das verificações desta entrega.
+- `requisitos.md`: documento original do usuário.
+- `../ROTAS.md`: índice de endpoints.
+- `../ESTADO_ATUAL.md`: estado consolidado, sem histórico contraditório.

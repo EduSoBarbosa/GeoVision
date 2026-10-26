@@ -2,7 +2,8 @@ import numpy as np
 import pytest
 import rasterio
 from rasterio.transform import from_origin
-from backend.app.pixels import clean_pixels, process_assets, NODATA
+
+from backend.app.pixels import NODATA, clean_pixels, process_assets
 
 
 def test_cloud_bits_and_water():
@@ -47,21 +48,20 @@ def test_local_geotiff_end_to_end(tmp_path):
         process_assets("", "", [0, 0, 1, 1], output)
 
 
-def test_download_route(monkeypatch):
-    from fastapi.testclient import TestClient
-    from backend.app import main, pixels
-
-    monkeypatch.setattr(main, "user", lambda token: {"email": "test@example.com"})
+def test_download_route(client, headers, monkeypatch):
+    from backend.app.routers import data
 
     def fake_download(scene, bbox, output):
         output.write_bytes(b"test-raster")
         return {"valid_fraction": 0.5}
 
-    monkeypatch.setattr(pixels, "download_scene", fake_download)
-    result = TestClient(main.app).post(
-        "/api/v1/landsat/download",
-        json={"scene_id": "test", "bbox": [-46.65, -23.56, -46.64, -23.55]},
-    )
+    monkeypatch.setattr(data, "download_scene", fake_download)
+    body = {
+        "scene_id": "LC09_L2SP_219076_20250724_02_T1",
+        "bbox": [-46.65, -23.56, -46.64, -23.55],
+    }
+    result = client.post("/api/v1/landsat/download", headers=headers, json=body)
     assert result.status_code == 200
     assert result.content == b"test-raster"
-    assert "attachment" in result.headers["content-disposition"]
+    assert result.headers["x-valid-fraction"] == "0.5"
+    assert client.post("/api/v1/landsat/download", json=body).status_code == 401

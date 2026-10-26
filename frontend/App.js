@@ -1,277 +1,367 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Linking,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
-const API = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8000";
+import { request } from "./src/api";
+import {
+  Badge,
+  Button,
+  Card,
+  Paragraph,
+  Row,
+  colors,
+} from "./src/components/ui";
+import MapScreen from "./src/screens/MapScreen";
+import AccountScreen from "./src/screens/AccountScreen";
+import DataScreen from "./src/screens/DataScreen";
+import MLScreen from "./src/screens/MLScreen";
+import VisitsScreen from "./src/screens/VisitsScreen";
+import DeveloperScreen from "./src/screens/DeveloperScreen";
+const NAV = [
+  "Explore",
+  "Analytics",
+  "Dados",
+  "Machine Learning",
+  "Visitas",
+  "Desenvolvedores",
+  "Sobre",
+  "Conta",
+];
+const DESCRIPTIONS = {
+  Explore: "Conheça a superfície da cidade.",
+  Analytics: "Explore padrões, índices e áreas de interesse.",
+  Dados: "Da cena de satélite ao dataset rastreável.",
+  "Machine Learning": "Planeje, compare e consuma seus modelos.",
+  Visitas: "Transforme áreas de interesse em visitas de campo.",
+  Desenvolvedores: "Integre dados térmicos ao seu projeto.",
+  Sobre: "Ciência urbana acessível e transparente.",
+  Conta: "Seu espaço de pesquisa.",
+};
 export default function App() {
-  const [tab, T] = useState("Explore"),
-    [email, E] = useState(""),
-    [password, P] = useState(""),
-    [token, S] = useState(""),
-    [verification, V] = useState(""),
-    [message, M] = useState(""),
-    [data, D] = useState(null),
-    [name, N] = useState("Visita de campo"),
-    [coords, C] = useState("[[-46.64,-23.55],[-46.63,-23.55],[-46.63,-23.54]]");
-  async function call(path, method = "GET", body) {
-    try {
-      let r = await fetch(API + "/api/v1/" + path, {
+  const [tab, setTab] = useState("Explore"),
+    [token, setToken] = useState(""),
+    [account, setAccount] = useState(null),
+    [message, setMessage] = useState(null),
+    [busy, setBusy] = useState(0);
+  const { width } = useWindowDimensions();
+  const desktop = width >= 1000;
+  const api = useCallback(
+    (path, method = "GET", body) =>
+      request(path, {
+        token,
         method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token,
-        },
-        body: body ? JSON.stringify(body) : undefined,
+        body,
+      }),
+    [token],
+  );
+  const notify = useCallback(
+    (text) =>
+      setMessage({
+        text,
+        error: false,
+      }),
+    [],
+  );
+  const run = useCallback(async (fn) => {
+    setBusy((x) => x + 1);
+    try {
+      return await fn();
+    } catch (error) {
+      setMessage({
+        text: error.message,
+        error: true,
       });
-      let j = await r.json();
-      if (!r.ok)
-        throw Error(
-          typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail),
-        );
-      return j;
-    } catch (e) {
-      M(e.message);
-      return null;
+    } finally {
+      setBusy((x) => x - 1);
     }
+  }, []);
+  async function login(value) {
+    const me = await request("/auth/me", {
+      token: value,
+    });
+    setToken(value);
+    setAccount(me);
+    notify("Sessão iniciada.");
   }
-  useEffect(() => {
-    D(null);
-    let path = {
-      Explore: "map",
-      Analytics: "map",
-      Áreas: "areas",
-      Desenvolvedores: "plans",
-      Sobre: "about",
-    }[tab];
-    if (path) call(path).then(D);
-  }, [tab, token]);
-  const button = (label, fn) => (
-    <Pressable accessibilityRole="button" style={s.button} onPress={fn}>
-      <Text style={{ color: "white", fontWeight: "600" }}>{label}</Text>
-    </Pressable>
-  );
-  const input = (label, value, set, secure = false) => (
-    <View>
-      <Text style={s.text}>{label}</Text>
-      <TextInput
-        accessibilityLabel={label}
-        style={s.input}
-        value={value}
-        onChangeText={set}
-        secureTextEntry={secure}
-        autoCapitalize="none"
-      />
-    </View>
-  );
+  async function download(path, name, method = "GET", body) {
+    if (Platform.OS !== "web")
+      throw new Error(
+        "Exportação de arquivos disponível na versão web; no mobile use a API documentada.",
+      );
+    const blob = await request(path, {
+      token,
+      method,
+      body,
+      raw: true,
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = name;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  const common = {
+    api,
+    run,
+    token,
+    account,
+    notify,
+    download,
+  };
   return (
-    <ScrollView style={s.page}>
-      <View style={s.header}>
-        <Text style={s.logo}>GeoVision / São Paulo</Text>
-        <Text style={{ color: "#c4e6bc" }}>
-          A cidade pela perspectiva da superfície.
-        </Text>
-      </View>
-      <View style={s.nav}>
-        {[
-          "Explore",
-          "Analytics",
-          "Áreas",
-          "Desenvolvedores",
-          "Sobre",
-          "Conta",
-        ].map((x) => (
-          <Pressable
-            key={x}
-            onPress={() => {
-              M("");
-              T(x);
-            }}
-            style={[s.chip, tab === x && { backgroundColor: "#c4e6bc" }]}
-          >
-            <Text>{x}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <View style={s.content}>
-        <Text style={s.title}>{tab}</Text>
-        {!!message && (
-          <Text accessibilityRole="alert" style={s.notice}>
-            {message}
-          </Text>
-        )}
-        {["Explore", "Analytics"].includes(tab) && (
-          <>
-            <Text style={s.text}>Temperatura da superfície • LST</Text>
-            <View style={s.panel}>
-              <Text style={s.title}>São Paulo</Text>
-              <Text style={s.text}>
-                {data?.empty
-                  ? "Aguardando cenas geográficas."
-                  : "Carregando dados…"}
-              </Text>
-              {button("Abrir mapa de referência", () =>
-                Linking.openURL(
-                  "https://www.openstreetmap.org/#map=11/-23.5505/-46.6333",
-                ),
-              )}
-            </View>
-            <Text style={s.text}>
-              A LST representa o aquecimento de telhados, solo e vegetação. Ela
-              é diferente da temperatura do ar medida em uma estação
-              meteorológica.
-            </Text>
-            {tab === "Analytics" && (
-              <Text style={s.text}>
-                Análise planejada: Landsat, NDVI, NDBI, impermeabilização e
-                altura de edificações. Comparações exigem cenas com condições
-                equivalentes. A resolução da grade não aumenta a resolução
-                térmica original. Previsão e SHAP aguardam dados e treinamento.
-              </Text>
-            )}
-            <Text style={s.notice}>
-              Visualização cartográfica integrada ainda pendente nesta versão
-              inicial.
-            </Text>
-          </>
-        )}
-        {tab === "Conta" && (
-          <>
-            {input("Email", email, E)}
-            {input("Senha (mínimo 8 caracteres)", password, P, true)}
-            {button("Cadastrar", async () => {
-              let j = await call("auth/register", "POST", { email, password });
-              if (j) {
-                V(j.development_verification_token);
-                M(j.message);
-              }
-            })}
-            {input("Token de verificação local", verification, V)}
-            {button("Verificar cadastro", async () => {
-              let j = await call("auth/verify", "POST", {
-                token: verification,
-              });
-              if (j) M("Cadastro verificado");
-            })}
-            {button("Entrar", async () => {
-              let j = await call("auth/login", "POST", { email, password });
-              if (j) {
-                S(j.access_token);
-                M("Sessão iniciada");
-              }
-            })}
-            {button("Sair", () => {
-              S("");
-              M("Sessão encerrada");
-            })}
-          </>
-        )}
-        {tab === "Áreas" && (
-          <>
-            {input("Nome da área", name, N)}
-            {input("Vértices [longitude, latitude]", coords, C)}
-            {button("Salvar área", async () => {
-              try {
-                let j = await call("areas", "POST", {
-                  name,
-                  coordinates: JSON.parse(coords),
-                });
-                if (j) {
-                  M("Área salva");
-                  D(await call("areas"));
+    <View
+      style={[
+        s.app,
+        {
+          flexDirection: desktop ? "row" : "column",
+        },
+      ]}
+    >
+      <View style={[s.sidebar, !desktop && s.mobileNav]}>
+        <View style={s.brand}>
+          <Text style={s.brandTitle}>◉ GeoVision</Text>
+          <Text style={s.brandSub}>OBSERVATÓRIO DE SUPERFÍCIE</Text>
+        </View>
+        <ScrollView
+          horizontal={!desktop}
+          style={{
+            flex: desktop ? 1 : undefined,
+          }}
+          contentContainerStyle={
+            !desktop
+              ? {
+                  gap: 4,
                 }
-              } catch {
-                M("Coordenadas devem ser JSON válido");
-              }
-            })}
-            {Array.isArray(data) &&
-              data.map((a) => (
-                <View key={a.id} style={s.panel}>
-                  <Text>
-                    {a.name} • {a.status}
-                  </Text>
-                  {button("Excluir", async () => {
-                    await call("areas/" + a.id, "DELETE");
-                    D(await call("areas"));
-                  })}
-                </View>
-              ))}
-          </>
-        )}
-        {tab === "Desenvolvedores" && (
-          <>
-            <Text style={s.text}>
-              Planos propostos para avaliação acadêmica. Nenhuma cobrança é
-              realizada.
+              : {
+                  gap: 6,
+                  paddingTop: 24,
+                }
+          }
+        >
+          {NAV.map((item, index) => (
+            <Pressable
+              key={item}
+              accessibilityRole="button"
+              accessibilityState={{
+                selected: tab === item,
+              }}
+              onPress={() => {
+                setTab(item);
+                setMessage(null);
+              }}
+              style={[s.nav, tab === item && s.active]}
+            >
+              <Text
+                style={[
+                  s.navText,
+                  tab === item && {
+                    color: colors.forest,
+                  },
+                ]}
+              >
+                {String(index + 1).padStart(2, "0")} {item}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+        {desktop && (
+          <View
+            style={{
+              gap: 10,
+              paddingTop: 20,
+            }}
+          >
+            <Text style={s.brandSub}>SÃO PAULO · BRASIL</Text>
+            <Text style={s.brandSub}>
+              Landsat / LST / aprendizado de máquina
             </Text>
-            {Array.isArray(data) &&
-              data.map((p) => (
-                <View key={p.name} style={s.panel}>
-                  <Text style={s.title}>
-                    {p.name} • R$ {p.price_brl}/mês
-                  </Text>
-                  <Text>{p.monthly_requests} consultas mensais</Text>
-                </View>
-              ))}
-            {button("Gerar chave de API", async () => {
-              let j = await call("keys", "POST");
-              if (j) M("Guarde sua chave: " + j.key);
-            })}
-            {button("Documentação interativa", () =>
-              Linking.openURL(API + "/docs"),
-            )}
-          </>
+            <Text style={s.brandSub}>MVP de pesquisa · 0.2.0</Text>
+          </View>
+        )}
+      </View>
+      <ScrollView
+        style={{
+          flex: 1,
+        }}
+        contentContainerStyle={{
+          padding: desktop ? 36 : 18,
+          maxWidth: 1450,
+          width: "100%",
+          alignSelf: "center",
+        }}
+      >
+        <Row>
+          <Badge>GEOVISION / {tab.toUpperCase()}</Badge>
+          <Text
+            style={{
+              color: colors.muted,
+              fontSize: 12,
+            }}
+          >
+            {account?.email || "Visitante"}
+            {busy > 0 ? " · Processando…" : ""}
+          </Text>
+        </Row>
+        <Text style={s.title}>{tab}</Text>
+        <Text style={s.subtitle}>{DESCRIPTIONS[tab]}</Text>
+        {message && (
+          <View
+            accessibilityRole="alert"
+            style={[
+              s.message,
+              {
+                backgroundColor: message.error ? "#F9E4DD" : "#E4EFD9",
+              },
+            ]}
+          >
+            <Text
+              selectable
+              style={{
+                color: colors.ink,
+                flex: 1,
+                lineHeight: 22,
+              }}
+            >
+              {message.text}
+            </Text>
+            <Pressable
+              accessibilityLabel="Fechar aviso"
+              onPress={() => setMessage(null)}
+            >
+              <Text>✕</Text>
+            </Pressable>
+          </View>
+        )}
+        {(tab === "Explore" || tab === "Analytics") && (
+          <MapScreen key={tab} {...common} advanced={tab === "Analytics"} />
+        )}
+        {tab === "Dados" && <DataScreen {...common} />}
+        {tab === "Machine Learning" && <MLScreen {...common} />}
+        {tab === "Visitas" && <VisitsScreen {...common} />}
+        {tab === "Desenvolvedores" && <DeveloperScreen {...common} />}
+        {tab === "Conta" && (
+          <AccountScreen
+            {...common}
+            onLogin={login}
+            onLogout={() => {
+              setToken("");
+              setAccount(null);
+              notify("Sessão encerrada.");
+            }}
+          />
         )}
         {tab === "Sobre" && (
           <>
-            <Text style={s.text}>{data?.text}</Text>
-            <Text style={s.text}>{data?.methodology}</Text>
+            <Card title="Uma leitura ambiental de São Paulo">
+              <Paragraph>
+                O GeoVision reúne observações de satélite e ferramentas de
+                análise para estudar a temperatura da superfície na Grande São
+                Paulo. O projeto nasceu para aproximar pesquisa, ensino e
+                planejamento urbano.
+              </Paragraph>
+              <Paragraph>
+                Explore apresenta conceitos e mapas. Analytics permite
+                inspecionar índices e registrar áreas para visitas. O
+                laboratório de modelos acompanha o caminho entre os dados e uma
+                estimativa de LST.
+              </Paragraph>
+            </Card>
+            <Card title="Compromissos científicos">
+              <Paragraph>
+                As observações mantêm fonte e data. Dados sintéticos são
+                identificados. A análise de vegetação, construções e calor
+                descreve associações; explicações de um modelo não comprovam
+                causalidade. SUHI exige referência urbana/rural explícita e não
+                é sinônimo de qualquer ponto quente.
+              </Paragraph>
+              <Paragraph>
+                Escopo histórico planejado: julho de 2016–2026, sujeito à
+                disponibilidade e qualidade das cenas. O produto ainda requer
+                validação com dados reais e pesquisa com usuários.
+              </Paragraph>
+            </Card>
           </>
         )}
-        <Text style={s.footer}>GeoVision • Pesquisa urbana • MVP 0.1</Text>
-      </View>
-    </ScrollView>
+        <Text style={s.footer}>
+          GeoVision · Dados com contexto. Decisões com evidências.
+        </Text>
+      </ScrollView>
+    </View>
   );
 }
 const s = StyleSheet.create({
-  page: { backgroundColor: "#f1f5f3" },
-  header: { backgroundColor: "#123d32", padding: 30, gap: 10 },
-  logo: { color: "white", fontSize: 27, fontWeight: "700" },
-  nav: { flexDirection: "row", flexWrap: "wrap", gap: 8, padding: 18 },
-  chip: { padding: 14, backgroundColor: "white", borderRadius: 22 },
-  content: { padding: 24, maxWidth: 1100, width: "100%", alignSelf: "center" },
-  title: {
-    fontSize: 24,
+  app: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: colors.paper,
+  },
+  sidebar: {
+    width: 240,
+    padding: 22,
+    backgroundColor: colors.forest,
+  },
+  mobileNav: {
+    width: "100%",
+    padding: 12,
+    maxHeight: 145,
+  },
+  brand: {
+    gap: 8,
+  },
+  brandTitle: {
+    fontSize: 26,
     fontWeight: "700",
-    color: "#164653",
-    marginBottom: 16,
+    color: "white",
   },
-  text: { color: "#334a46", fontSize: 16, lineHeight: 25, marginVertical: 10 },
-  button: {
-    backgroundColor: "#164653",
-    padding: 15,
+  brandSub: {
+    fontSize: 10,
+    letterSpacing: 1,
+    color: "#B9CFC1",
+    lineHeight: 17,
+  },
+  nav: {
+    padding: 13,
     borderRadius: 9,
-    marginVertical: 8,
-    alignSelf: "flex-start",
+    minHeight: 44,
   },
-  input: {
-    backgroundColor: "white",
-    borderWidth: 1,
-    borderColor: "#9cafaa",
-    padding: 14,
-    borderRadius: 8,
+  active: {
+    backgroundColor: colors.lime,
   },
-  panel: {
-    backgroundColor: "white",
-    padding: 25,
-    borderRadius: 16,
-    marginVertical: 12,
+  navText: {
+    color: "#DCE8DD",
+    fontSize: 13,
+    fontWeight: "500",
   },
-  notice: { backgroundColor: "#e5efd8", padding: 16, lineHeight: 22 },
-  footer: { marginVertical: 35, color: "#5b7069" },
+  title: {
+    fontSize: 36,
+    fontWeight: "700",
+    color: colors.ink,
+    marginTop: 18,
+  },
+  subtitle: {
+    color: colors.muted,
+    fontSize: 16,
+    lineHeight: 24,
+    marginTop: 7,
+    marginBottom: 26,
+  },
+  message: {
+    padding: 16,
+    borderRadius: 10,
+    flexDirection: "row",
+    gap: 15,
+    marginBottom: 18,
+  },
+  footer: {
+    fontSize: 12,
+    color: colors.muted,
+    paddingVertical: 30,
+  },
 });

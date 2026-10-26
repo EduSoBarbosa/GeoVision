@@ -1,18 +1,29 @@
 {
   "name": "geovision",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build": "expo export --platform web",
+    "check": "prettier --check App.js src",
+    "format": "prettier --write App.js src",
+    "prebuild": "node scripts/embed-map.mjs",
+    "prestart": "node scripts/embed-map.mjs",
+    "preweb": "node scripts/embed-map.mjs"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~6.1.0",
     "expo": "~54.0.0",
+    "leaflet": "1.9.4",
     "react": "19.1.0",
+    "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-web": "^0.21.0",
-    "react-dom": "19.1.0",
-    "@expo/metro-runtime": "~6.1.0"
+    "react-native-webview": "13.15.0"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
   }
 }

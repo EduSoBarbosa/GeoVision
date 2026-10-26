@@ -1,46 +1,49 @@
-# Rotas da aplicação
+# Rotas · GeoVision 0.2.0
 
-Todas as rotas estão em `backend/app/main.py`.
+Todas são montadas em `backend/app/main.py`. Implementações ficam em `backend/app/routers/`.
 
-| Método | Rota | Função |
+| Método | Rota | Operação |
 | --- | --- | --- |
-| GET | `/health` | `health` |
-| POST | `/api/v1/auth/register` | `register` |
-| POST | `/api/v1/auth/verify` | `verify` |
-| POST | `/api/v1/auth/login` | `login` |
-| GET | `/api/v1/about` | `about` |
-| GET | `/api/v1/plans` | `plans` |
-| GET | `/api/v1/map` | `map_data` |
-| GET | `/api/v1/areas` | `areas` |
-| POST | `/api/v1/areas` | `create_area` |
-| DELETE | `/api/v1/areas/{area_id}` | `delete_area` |
-| POST | `/api/v1/keys` | `key` |
-| GET | `/api/v1/developer/lst` | `developer` |
-| GET | `/api/v1/ml/status` | `ml_status` |
-| POST | `/api/v1/ml/predict` | `predict` |
-| GET | `/api/v1/landsat/scenes` | `landsat_scenes` |
-| POST | `/api/v1/landsat/download` | `download_pixels` |
+| GET | `/health/live` | Live |
+| GET | `/health` | Ready |
+| GET | `/api/v1/plans` | Plans |
+| GET | `/api/v1/about` | About |
+| POST | `/api/v1/auth/register` | Register |
+| POST | `/api/v1/auth/resend` | Resend |
+| POST | `/api/v1/auth/verify` | Verify |
+| POST | `/api/v1/auth/login` | Login |
+| GET | `/api/v1/auth/me` | Me |
+| GET | `/api/v1/areas` | List Areas |
+| POST | `/api/v1/areas` | Create Area |
+| PUT | `/api/v1/areas/{area_id}` | Update Area |
+| DELETE | `/api/v1/areas/{area_id}` | Delete Area |
+| GET | `/api/v1/keys` | Keys |
+| POST | `/api/v1/keys` | Create Key |
+| DELETE | `/api/v1/keys/{key_id}` | Revoke |
+| GET | `/api/v1/usage` | Usage |
+| GET | `/api/v1/developer/lst` | Developer Data |
+| GET | `/api/v1/demo/map` | Demo Map |
+| GET | `/api/v1/map` | Map Data |
+| GET | `/api/v1/datasets` | Datasets |
+| POST | `/api/v1/datasets/upload` | Upload Dataset |
+| GET | `/api/v1/datasets/{dataset_id}/download` | Dataset Download |
+| POST | `/api/v1/datasets/demo` | Demo |
+| GET | `/api/v1/landsat/scenes` | Scenes |
+| POST | `/api/v1/landsat/collect` | Collect |
+| POST | `/api/v1/landsat/download` | Download |
+| GET | `/api/v1/jobs` | Jobs |
+| GET | `/api/v1/jobs/{job_id}` | Job |
+| POST | `/api/v1/datasets/import` | Import Csv |
+| GET | `/api/v1/ml/status` | Status |
+| GET | `/api/v1/ml/models` | Models |
+| POST | `/api/v1/ml/train` | Training |
+| POST | `/api/v1/ml/models/{model_id}/activate` | Activate |
+| POST | `/api/v1/ml/predict` | Predict |
+| POST | `/api/v1/ml/explain` | Explain |
+| GET | `/api/v1/ml/models/{model_id}/report` | Report |
 
-## Onde encontrar cada parte
+## Testar
 
-- `backend/app/main.py`: FastAPI, rotas, autenticação, áreas e cotas.
-- `backend/app/landsat.py`: busca de cenas no catálogo.
-- `backend/app/pixels.py`: download por janela, máscara QA e GeoTIFF.
-- `backend/tests/`: testes da API e dos pixels.
-- `frontend/App.js`: telas React Native/Expo.
-- `models/train.py`: treinamento XGBoost offline.
-- `infra/compose.yaml`: MongoDB local.
-- `ESTADO_ATUAL.md`: funcionalidades e pendências.
+Inicie o Compose e abra http://localhost:8000/docs. Cadastre, verifique o email no Mailpit e faça login. Em **Authorize**, cole o JWT. Para `/developer/lst`, informe `X-API-Key`.
 
-## Abrir as rotas no navegador
-
-Na raiz `geovision/`, execute:
-
-```bash
-python -m pip install -r backend/requirements.txt
-python -m uvicorn backend.app.main:app --reload
-```
-
-Abra http://localhost:8000/docs. O contrato JSON fica em http://localhost:8000/openapi.json.
-MongoDB deve estar disponível para autenticação e persistência.
-A rota de previsão ainda responde 503, pois o modelo real não foi integrado.
+Contrato exportado também disponível em `docs/openapi.json`.

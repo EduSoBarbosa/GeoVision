@@ -1,37 +1,41 @@
-# Estado atual — 26/10/2026
+# Estado consolidado · GeoVision 0.2.0
 
 ## Implementado
 
-API de cadastro/login, verificação LOCAL, consulta de dados LST, áreas salvas por proprietário, exclusão, catálogo de planos, emissão de chaves e cota mensal persistida em MongoDB. Interface Expo com formulários e navegação. Pipeline offline XGBoost com separação temporal e métricas. MongoDB local via Compose e configuração .env.
+- Backend modular com OpenAPI, validação, JWT, Argon2, SMTP e permissões.
+- CRUD de visitas com polígonos válidos, notas, data e status.
+- Chaves de API revogáveis, cotas mensais e controles básicos de abuso.
+- Catálogo Landsat e download de pixels por janela com QA_PIXEL e LST em °C.
+- Coleta assíncrona com extração NDVI/NDBI e amostras persistidas em MongoDB.
+- Importação CSV, exportação de datasets e registro de procedência.
+- Fila MongoDB, status, heartbeat e retomada após interrupção.
+- Planejamento de experimentos, split temporal/espacial, baseline/RF/XGBoost,
+  normalização, seleção na validação, teste reservado e relatório de erros.
+- Registro de modelos, integridade por SHA-256, publicação manual, inferência
+  em lote, avisos de extrapolação e explicações TreeSHAP.
+- Mapa 2D interativo, pontos, camadas, desenho de visitas, previsão/erro e telas
+  de dados, tarefas, modelos, conta e desenvolvedores.
+- Dockerfiles e Compose para web/API/worker/MongoDB/Mailpit, volumes e healthchecks.
+- Dependências diretas fixadas, lockfile npm, formatação, lint, testes e CI.
 
-## Parcial / pendente
+## Dados reais versus demonstração
 
-Esta é uma base inicial, não o MVP completo dos requisitos. Mapa 2D integrado, desenho visual de polígonos, camadas térmicas, meteorologia, edição de visitas, envio real de email, inferência online, importação de cenas, SHAP e cobertura abrangente de testes ainda precisam ser implementados.
-/api/v1/ml/predict responde 503; status declara ready=false. Nenhuma previsão ou medição fictícia é apresentada como real. Plano de dados inclui Landsat e variáveis urbanas; não há dados carregados.
+Não há modelo científico aprovado nem cenas reais embutidas no ZIP.
+Mapa público e dataset de laboratório são sintéticos e rotulados.
+A aplicação pode treinar/consumir dados reais fornecidos pelo usuário.
+Modelos sintéticos são bloqueados para publicação como modelo ativo.
 
-## Limitações
+## Limitações conhecidas
 
-Token de cadastro devolvido localmente não confirma posse do email. Segredo de desenvolvimento deve ser substituído. Falta proteção contra força bruta, revogação de chaves, paginação completa e validação topológica de polígonos. Preços são sugestões acadêmicas, sem cobrança. Não publicar esta configuração diretamente.
+- QA_RADSAT/ST_QA e validação espaço-temporal com buffer ainda pendentes.
+- Bases urbanas, meteorologia e referência rural para SUHI não foram integradas.
+- Mapa exibe amostras paginadas, não tiles de um raster completo.
+- Exportação de arquivos via botão é apenas web; mobile exige validação física.
+- Não há cobrança, 3D, simulação causal, refresh token, expurgo ou migração automática da v0.1.
+- O MVP usa um worker; operações disco/MongoDB não são uma transação única.
+- Compose é de desenvolvimento; não foi homologado para produção.
 
-## Próximos passos
+## Evidências de validação
 
-1. Integrar mapa web/mobile e desenho de áreas.
-2. Importar cenas reais com procedência e QA.
-3. Implementar SMTP e endurecer autenticação.
-4. Treinar, validar espacialmente e integrar modelo/SHAP.
-5. Completar testes de cada rota e fluxo mobile.
-
-## Revisão de legibilidade e consulta Landsat
-
-Python formatado com Black; frontend, JSON e documentação com Prettier.
-Adicionada rota `/api/v1/landsat/scenes` e testes locais de contrato/escala.
-Consulta documentada em `docs/LST_API.md`. Ainda não baixa, recorta ou ingere rasters.
-
-## Atualização: pixels e nuvens
-
-Implementado download de recorte via POST /api/v1/landsat/download,
-assinatura dos assets, leitura por janela, conversão °C e máscara QA_PIXEL
-(bits 0–5), com GeoTIFF georreferenciado para download.
-Esta atualização substitui as observações anteriores sobre falta de download/recorte.
-Ainda pendem ingestão MongoDB, botão no frontend, filtros ST_QA/QA_RADSAT,
-e validação ponta a ponta com cena remota real. Consulte docs/LST_API.md.
+Consulte `docs/VALIDACAO.md` para resultados reais de testes, builds e limitações
+do ambiente. A existência de Dockerfile/CI não significa que uma implantação foi executada.

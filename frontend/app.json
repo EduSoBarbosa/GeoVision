@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "GeoVision",
+    "slug": "geovision",
+    "version": "0.2.0",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "web": {
+      "bundler": "metro"
+    },
+    "android": {
+      "package": "br.edu.geovision.app"
+    },
+    "ios": {
+      "bundleIdentifier": "br.edu.geovision.app"
+    }
+  }
+}
