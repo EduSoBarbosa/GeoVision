@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+pymongo
+python-dotenv
+argon2-cffi
+PyJWT
+email-validator
+pandas
+scikit-learn
+xgboost
+pytest
+httpx
+mongomock
+
+rasterio
+planetary-computer
+httpx[socks]
