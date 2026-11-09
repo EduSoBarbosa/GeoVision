@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { View, Text } from "react-native";
+import { REGIONS } from "../demo";
 import GeoMap from "../components/GeoMap";
 import {
   Badge,
@@ -8,9 +10,18 @@ import {
   Metric,
   Paragraph,
   Row,
+  colors,
 } from "../components/ui";
 
-export default function MapScreen({ api, run, token, advanced, notify }) {
+export default function MapScreen({
+  api,
+  run,
+  token,
+  advanced,
+  notify,
+  demo,
+  navigate,
+}) {
   const [features, setFeatures] = useState([]),
     [datasets, setDatasets] = useState([]),
     [models, setModels] = useState([]),
@@ -25,9 +36,33 @@ export default function MapScreen({ api, run, token, advanced, notify }) {
     [vertices, setVertices] = useState([]),
     [name, setName] = useState("Nova visita"),
     [mapKey, resetMap] = useState(0);
+  const [year, setYear] = useState(2025);
+  const [region, setRegion] = useState("Todas");
+  const [cooling, setCooling] = useState(0);
+  async function scenario(
+    nextYear = year,
+    nextRegion = region,
+    nextCooling = cooling,
+  ) {
+    setYear(nextYear);
+    setRegion(nextRegion);
+    setCooling(nextCooling);
+    const result = await api(
+      `/demo/map?year=${nextYear}&region=${encodeURIComponent(nextRegion)}&cooling=${nextCooling}`,
+    );
+    setFeatures(result.features);
+    setTotal(result.total);
+    setSource("demo");
+    setSynthetic(true);
+    select(null);
+    setPredictionSource(null);
+    setLayer("lst");
+  }
   async function load(id) {
     const result = await api(
-      id === "demo" ? "/demo/map" : `/map?dataset_id=${id}`,
+      id === "demo"
+        ? `/demo/map?year=${year}&region=${encodeURIComponent(region)}&cooling=${cooling}`
+        : `/map?dataset_id=${id}`,
     );
     setFeatures(result.features);
     setTotal(result.total || result.features.length);
@@ -109,6 +144,52 @@ export default function MapScreen({ api, run, token, advanced, notify }) {
   }
   return (
     <>
+      {demo && (
+        <Card title="Experimente o território">
+          <Paragraph>
+            Compare amostras fictícias do centro, parque e zona leste. Os
+            controles recalculam os pontos e indicadores.
+          </Paragraph>
+          <Row>
+            {[2023, 2024, 2025, 2026].map((y) => (
+              <Button
+                key={y}
+                secondary={year !== y}
+                onPress={() => run(() => scenario(y))}
+              >
+                {y}
+              </Button>
+            ))}
+          </Row>
+          <Row>
+            {["Todas", ...REGIONS.map((r) => r.name)].map((r) => (
+              <Button
+                key={r}
+                secondary={region !== r}
+                onPress={() => run(() => scenario(year, r))}
+              >
+                {r}
+              </Button>
+            ))}
+          </Row>
+          <Paragraph>
+            Hipótese didática: aumento de vegetação em {cooling} pontos
+            percentuais. A fórmula ilustrativa altera NDVI, NDBI e LST; não é
+            previsão de uma intervenção real.
+          </Paragraph>
+          <Row>
+            {[0, 10, 25, 40].map((c) => (
+              <Button
+                key={c}
+                secondary={cooling !== c}
+                onPress={() => run(() => scenario(year, region, c))}
+              >
+                {c === 0 ? "Cenário original" : `+${c} p.p. de vegetação`}
+              </Button>
+            ))}
+          </Row>
+        </Card>
+      )}
       <Row>
         <Badge>
           {synthetic ? "DEMONSTRAÇÃO SINTÉTICA" : "OBSERVAÇÕES IMPORTADAS"}
@@ -132,6 +213,17 @@ export default function MapScreen({ api, run, token, advanced, notify }) {
           label="Pontos exibidos / disponíveis"
           value={`${features.length} / ${total}`}
         />
+        {demo && (
+          <Metric
+            label="Amplitude térmica da amostra"
+            value={
+              values.length
+                ? `${(Math.max(...values) - Math.min(...values)).toFixed(1)} °C`
+                : "—"
+            }
+            note="Diferença entre o ponto mais quente e o mais frio."
+          />
+        )}
         <Metric
           label="Origem"
           value={synthetic ? "Sintética" : "Dataset"}
@@ -157,7 +249,7 @@ export default function MapScreen({ api, run, token, advanced, notify }) {
           ))}
         </Row>
         <Row>
-          {(advanced
+          {(advanced || demo
             ? [
                 "lst",
                 "ndvi",
@@ -181,7 +273,7 @@ export default function MapScreen({ api, run, token, advanced, notify }) {
             {drawing ? "Cancelar desenho" : "Demarcar visita"}
           </Button>
         </Row>
-        {advanced && (
+        {(advanced || demo) && (
           <Card title="Estimar a LST dos pontos exibidos">
             <Row>
               <Button
@@ -220,6 +312,62 @@ export default function MapScreen({ api, run, token, advanced, notify }) {
           drawing={drawing}
           onEvent={event}
         />
+        <View style={{ gap: 10, paddingVertical: 16 }}>
+          <Text
+            style={{
+              color: colors.muted,
+              fontFamily: "monospace",
+              fontSize: 11,
+            }}
+          >
+            LEGENDA / {layer.toUpperCase()}
+          </Text>
+          <View style={{ flexDirection: "row", gap: 4 }}>
+            {["#25577E", "#4B9699", "#A6C87C", "#E9BC64", "#CD634A"].map(
+              (color) => (
+                <View
+                  key={color}
+                  style={{
+                    flex: 1,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: color,
+                  }}
+                />
+              ),
+            )}
+          </View>
+          <View
+            style={{ flexDirection: "row", justifyContent: "space-between" }}
+          >
+            <Text
+              style={{
+                color: colors.muted,
+                fontSize: 11,
+                fontFamily: "monospace",
+              }}
+            >
+              {layer === "error"
+                ? "≤ −5 °C"
+                : ["lst", "predicted_lst"].includes(layer)
+                  ? "≤ 18 °C"
+                  : "−1"}
+            </Text>
+            <Text
+              style={{
+                color: colors.muted,
+                fontSize: 11,
+                fontFamily: "monospace",
+              }}
+            >
+              {layer === "error"
+                ? "≥ +5 °C"
+                : ["lst", "predicted_lst"].includes(layer)
+                  ? "≥ 40 °C"
+                  : "+1"}
+            </Text>
+          </View>
+        </View>
         <Paragraph muted>
           {["lst", "predicted_lst"].includes(layer)
             ? "Escala fixa: azul ≤18 °C → verde → amarelo → vermelho ≥40 °C."
@@ -250,12 +398,36 @@ export default function MapScreen({ api, run, token, advanced, notify }) {
                 Limpar desenho
               </Button>
             </Row>
+            <Paragraph>
+              Marque ao menos três vértices no mapa para fechar a área.
+            </Paragraph>
             {!token && <Paragraph>Entre na sua conta para salvar.</Paragraph>}
           </>
         )}
       </Card>
+      {demo && (
+        <Row>
+          <Button secondary onPress={() => navigate("Visitas")}>
+            Ver visitas salvas ↗
+          </Button>
+          <Button secondary onPress={() => navigate("Machine Learning")}>
+            Abrir laboratório ↗
+          </Button>
+        </Row>
+      )}
       {selected && (
-        <Card title="Ponto selecionado">
+        <Card
+          title={`Ponto selecionado${selected.properties.region ? ` · ${selected.properties.region}` : ""}`}
+        >
+          {demo && (
+            <Paragraph>
+              {selected.properties.ndvi > 0.6
+                ? "Vegetação predominante: este ponto simulado apresenta menor aquecimento."
+                : selected.properties.ndbi > 0.3
+                  ? "Construção predominante: compare este ponto quente com as amostras do parque."
+                  : "Área de transição: observe o equilíbrio entre vegetação e construção."}
+            </Paragraph>
+          )}
           <Paragraph>
             Latitude {selected.coordinates[1].toFixed(5)} · Longitude{" "}
             {selected.coordinates[0].toFixed(5)}

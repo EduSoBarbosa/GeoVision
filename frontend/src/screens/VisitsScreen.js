@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Button, Card, Field, Paragraph, Row, Badge } from "../components/ui";
-export default function VisitsScreen({ api, run, token, notify }) {
+export default function VisitsScreen({
+  api,
+  run,
+  token,
+  notify,
+  demo,
+  navigate,
+}) {
   const [areas, setAreas] = useState([]),
     [editing, setEditing] = useState(null),
     [confirm, setConfirmation] = useState(null);
@@ -17,6 +24,11 @@ export default function VisitsScreen({ api, run, token, notify }) {
           Desenhe uma área no mapa para planejar a visita. Aqui você pode
           registrar data, notas e andamento.
         </Paragraph>
+        {demo && (
+          <Button onPress={() => navigate("Explore")}>
+            Desenhar uma nova área no mapa ↗
+          </Button>
+        )}
         <Button secondary onPress={() => run(refresh)}>
           Atualizar visitas
         </Button>

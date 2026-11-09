@@ -29,6 +29,7 @@ export default function MLScreen({
   account,
   notify,
   download,
+  demo,
 }) {
   const [datasets, setDatasets] = useState([]),
     [selected, setSelected] = useState([]),
@@ -40,9 +41,38 @@ export default function MLScreen({
     [prediction, setPrediction] = useState(null),
     [explanation, setExplanation] = useState(null),
     [active, setActive] = useState(null);
+  const [jobs, setJobs] = useState([]);
+  const [training, setTraining] = useState(false);
+  const [vegetation, setVegetation] = useState(0.5);
+  const [construction, setConstruction] = useState(0.1);
+  const [livePrediction, setLivePrediction] = useState(null);
+  useEffect(() => {
+    if (!demo) return;
+    let current = true;
+    api("/ml/predict", "POST", {
+      rows: [
+        {
+          ndvi: vegetation,
+          ndbi: construction,
+          latitude: -23.55,
+          longitude: -46.63,
+        },
+      ],
+      model_id: "xgb-demo",
+    })
+      .then((r) => {
+        if (current) setLivePrediction(r.lst_celsius[0]);
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [demo, vegetation, construction]);
   async function refresh() {
     const status = await api("/ml/status");
     setActive(status.active_model);
+    if (demo)
+      setJobs((await api("/jobs")).filter((j) => j.kind === "treinamento"));
     if (token) {
       const [ds, ms] = await Promise.all([api("/datasets"), api("/ml/models")]);
       setDatasets(ds);
@@ -51,9 +81,76 @@ export default function MLScreen({
   }
   useEffect(() => {
     run(refresh);
+    if (!demo) return;
+    const timer = setInterval(() => refresh().catch(() => {}), 1000);
+    return () => clearInterval(timer);
   }, [token]);
   return (
     <>
+      {demo && (
+        <Card title="Laboratório interativo · e se os índices mudassem?">
+          <Badge>FÓRMULA ILUSTRATIVA · NÃO É INFERÊNCIA REAL</Badge>
+          <Paragraph>
+            Altere os índices para ver a estimativa reagir. Fórmula da demo: 34
+            − 10 × NDVI + 5 × NDBI. As contribuições explicadas abaixo
+            correspondem a essa fórmula, sem executar SHAP.
+          </Paragraph>
+          <Paragraph>NDVI · vegetação: {vegetation.toFixed(2)}</Paragraph>
+          <Row>
+            {[0.1, 0.3, 0.5, 0.7, 0.9].map((v) => (
+              <Button
+                key={v}
+                secondary={vegetation !== v}
+                onPress={() => setVegetation(v)}
+              >
+                {v.toFixed(1)}
+              </Button>
+            ))}
+          </Row>
+          <Paragraph>NDBI · construção: {construction.toFixed(2)}</Paragraph>
+          <Row>
+            {[-0.3, 0.1, 0.4, 0.7].map((v) => (
+              <Button
+                key={v}
+                secondary={construction !== v}
+                onPress={() => setConstruction(v)}
+              >
+                {v.toFixed(1)}
+              </Button>
+            ))}
+          </Row>
+          <Metric
+            label="LST simulada, atualizada ao alterar os índices"
+            value={
+              livePrediction === null ? "…" : `${livePrediction.toFixed(1)} °C`
+            }
+          />
+          <Button
+            secondary
+            onPress={() => {
+              setRows(
+                JSON.stringify(
+                  [
+                    {
+                      ndvi: vegetation,
+                      ndbi: construction,
+                      latitude: -23.55,
+                      longitude: -46.63,
+                    },
+                  ],
+                  null,
+                  2,
+                ),
+              );
+              setModel(models.find((m) => m.id === "xgb-demo") || null);
+              setPrediction(null);
+              setExplanation(null);
+            }}
+          >
+            Usar este cenário na previsão abaixo ↓
+          </Button>
+        </Card>
+      )}
       <Row>
         <Metric
           label="Modelo ativo"
@@ -68,8 +165,10 @@ export default function MLScreen({
       <Card title="Planejar um experimento">
         <Paragraph>
           1. Selecione datasets compatíveis. 2. Escolha o recorte de avaliação.
-          3. Treine. O worker compara baseline, Random Forest e XGBoost; escolhe
-          pela validação e avalia uma única vez no teste reservado.
+          3. Treine. Compare baseline, Random Forest e XGBoost pela validação.
+          {demo
+            ? " Nesta demo, fila, comparação e métricas são simuladas; não há treinamento real."
+            : " O worker avalia uma única vez no teste reservado."}
         </Paragraph>
         <Row>
           {datasets.map((d) => (
@@ -124,14 +223,25 @@ export default function MLScreen({
         </Paragraph>
         <Row>
           <Button
-            disabled={!account?.admin || selected.length === 0}
+            disabled={
+              !account?.admin ||
+              selected.length === 0 ||
+              training ||
+              jobs.some((j) => j.status !== "concluida")
+            }
             onPress={() =>
               run(async () => {
-                await api("/ml/train", "POST", {
-                  dataset_ids: selected,
-                  feature_set: featureSet,
-                  strategy,
-                });
+                setTraining(true);
+                try {
+                  await api("/ml/train", "POST", {
+                    dataset_ids: selected,
+                    feature_set: featureSet,
+                    strategy,
+                  });
+                  await refresh();
+                } finally {
+                  setTraining(false);
+                }
                 notify(
                   "Treino enfileirado. Acompanhe em Dados e atualize os experimentos ao concluir.",
                 );
@@ -150,6 +260,37 @@ export default function MLScreen({
           </Paragraph>
         )}
       </Card>
+      {demo &&
+        jobs.map((j) => (
+          <Card key={j.id} title={`Experimento · ${j.status}`}>
+            <Paragraph>
+              {j.progress}% ·{" "}
+              {j.progress < 30
+                ? "Preparando os dados"
+                : j.progress < 70
+                  ? "Comparando os modelos"
+                  : j.progress < 100
+                    ? "Avaliando o teste"
+                    : "Modelo disponível no registro abaixo"}
+            </Paragraph>
+            <View
+              style={{
+                height: 8,
+                backgroundColor: colors.elevated,
+                borderRadius: 4,
+              }}
+            >
+              <View
+                style={{
+                  height: 8,
+                  width: `${j.progress}%`,
+                  backgroundColor: colors.lime,
+                  borderRadius: 4,
+                }}
+              />
+            </View>
+          </Card>
+        ))}
       <Card title="Registro de modelos">
         {models.length === 0 && (
           <Paragraph muted>
@@ -158,10 +299,13 @@ export default function MLScreen({
           </Paragraph>
         )}
         {models.map((m) => (
-          <Card key={m.id} title={`${m.winner} · ${m.id.slice(0, 8)}`}>
+          <Card key={m.id} title={`${m.winner} · ${m.id.slice(-8)}`}>
             <Row>
               <Badge>{m.synthetic ? "SINTÉTICO" : "DADOS IMPORTADOS"}</Badge>
               <Badge>{m.strategy}</Badge>
+              {active?.id === m.id && (
+                <Badge>{demo ? "ATIVO NA DEMO" : "ATIVO"}</Badge>
+              )}
             </Row>
             <Paragraph>
               Teste: MAE {m.test.mae.toFixed(3)} °C · RMSE{" "}
@@ -180,7 +324,7 @@ export default function MLScreen({
                 <View
                   style={{
                     height: 7,
-                    backgroundColor: "#E8EEE5",
+                    backgroundColor: colors.elevated,
                     borderRadius: 5,
                   }}
                 >
@@ -219,18 +363,22 @@ export default function MLScreen({
               >
                 Exportar erros de teste
               </Button>
-              {account?.admin && !m.synthetic && (
+              {account?.admin && (demo || !m.synthetic) && (
                 <Button
                   secondary
                   onPress={() =>
                     run(async () => {
                       await api(`/ml/models/${m.id}/activate`, "POST");
-                      notify("Modelo publicado.");
+                      notify(
+                        demo
+                          ? "Modelo ativado apenas nesta demonstração."
+                          : "Modelo publicado.",
+                      );
                       await refresh();
                     })
                   }
                 >
-                  Publicar como ativo
+                  {demo ? "Ativar na demonstração" : "Publicar como ativo"}
                 </Button>
               )}
             </Row>
@@ -314,8 +462,9 @@ export default function MLScreen({
               </Paragraph>
             ))}
             <Paragraph muted>
-              SHAP explica associações aprendidas. Alterar uma feature aqui não
-              simula um efeito causal na cidade.
+              {demo
+                ? "Contribuições calculadas pela fórmula da demo. Não são resultados reais de SHAP nem efeitos causais."
+                : "SHAP explica associações aprendidas. Alterar uma feature aqui não simula um efeito causal na cidade."}
             </Paragraph>
           </>
         )}

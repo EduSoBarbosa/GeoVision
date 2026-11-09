@@ -1,7 +1,24 @@
 import React, { useEffect, useState } from "react";
-import { Platform, Text } from "react-native";
-import { Badge, Button, Card, Field, Paragraph, Row } from "../components/ui";
-export default function DataScreen({ api, run, token, notify, download }) {
+import { Platform, Text, View } from "react-native";
+import { SAMPLE_CSV } from "../demo";
+import {
+  Badge,
+  Button,
+  Card,
+  Field,
+  Paragraph,
+  Row,
+  colors,
+} from "../components/ui";
+export default function DataScreen({
+  api,
+  run,
+  token,
+  notify,
+  download,
+  demo,
+  navigate,
+}) {
   const [year, setYear] = useState("2025"),
     [cloud, setCloudCover] = useState("20"),
     [bbox, setBbox] = useState("-46.65,-23.56,-46.64,-23.55"),
@@ -18,14 +35,27 @@ export default function DataScreen({ api, run, token, notify, download }) {
   }
   useEffect(() => {
     run(refresh);
-    const timer = setInterval(() => {
-      if (token) refresh().catch(() => {});
-    }, 5000);
+    const timer = setInterval(
+      () => {
+        if (token) refresh().catch(() => {});
+      },
+      demo ? 1000 : 5000,
+    );
     return () => clearInterval(timer);
   }, [token]);
   const bounds = () => bbox.split(",").map(Number);
   return (
     <>
+      {demo && (
+        <Card title="Do satélite ao dataset, sem espera real">
+          <Badge>CATÁLOGO E PROCESSAMENTO SIMULADOS</Badge>
+          <Paragraph>
+            Busque cenas, escolha uma e simule a coleta. A fila avança por cerca
+            de 9 segundos e cria um dataset para explorar no mapa e treinar
+            modelos. Os arquivos de demonstração são CSV ou GeoJSON.
+          </Paragraph>
+        </Card>
+      )}
       <Card title="Catálogo Landsat · julho">
         <Paragraph>
           Busque cenas L2SP com temperatura de superfície. O percentual de
@@ -93,14 +123,19 @@ export default function DataScreen({ api, run, token, notify, download }) {
                 disabled={!token}
                 onPress={() =>
                   run(() =>
-                    download("/landsat/download", "lst_celsius.tif", "POST", {
-                      scene_id: s.id,
-                      bbox: bounds(),
-                    }),
+                    download(
+                      "/landsat/download",
+                      demo ? "amostras-demo.geojson" : "lst_celsius.tif",
+                      "POST",
+                      {
+                        scene_id: s.id,
+                        bbox: bounds(),
+                      },
+                    ),
                   )
                 }
               >
-                Baixar GeoTIFF
+                {demo ? "Baixar GeoJSON simulado" : "Baixar GeoTIFF"}
               </Button>
             </Row>
           </Card>
@@ -111,6 +146,11 @@ export default function DataScreen({ api, run, token, notify, download }) {
           CSV: ndvi, ndbi, latitude, longitude, lst, year; scene_id opcional.
           Para treino temporal, use ao menos três anos.
         </Paragraph>
+        {demo && (
+          <Button secondary onPress={() => setCsv(SAMPLE_CSV)}>
+            Preencher CSV de exemplo · 36 amostras / 3 anos
+          </Button>
+        )}
         <Field
           label="Cole um CSV (até 2 MB nesta interface)"
           value={csv}
@@ -172,12 +212,40 @@ export default function DataScreen({ api, run, token, notify, download }) {
                 {j.progress}% · tentativa {j.attempts}
               </Paragraph>
             </Row>
+            <View
+              accessibilityRole="progressbar"
+              accessibilityValue={{ min: 0, max: 100, now: j.progress }}
+              style={{
+                height: 8,
+                backgroundColor: colors.elevated,
+                borderRadius: 4,
+              }}
+            >
+              <View
+                style={{
+                  width: `${j.progress}%`,
+                  height: 8,
+                  backgroundColor: colors.lime,
+                  borderRadius: 4,
+                }}
+              />
+            </View>
             <Paragraph muted>{j.id}</Paragraph>
             {j.error && <Paragraph>{j.error}</Paragraph>}
             {j.result && <Paragraph>{JSON.stringify(j.result)}</Paragraph>}
           </Card>
         ))}
       </Card>
+      {demo && (
+        <Row>
+          <Button secondary onPress={() => navigate("Explore")}>
+            Explorar datasets no mapa ↗
+          </Button>
+          <Button secondary onPress={() => navigate("Machine Learning")}>
+            Treinar com estes dados ↗
+          </Button>
+        </Row>
+      )}
       <Card title="Seus datasets">
         {datasets.length === 0 && (
           <Paragraph muted>

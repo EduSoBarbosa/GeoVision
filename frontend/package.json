@@ -11,7 +11,8 @@
     "format": "prettier --write App.js src",
     "prebuild": "node scripts/embed-map.mjs",
     "prestart": "node scripts/embed-map.mjs",
-    "preweb": "node scripts/embed-map.mjs"
+    "preweb": "node scripts/embed-map.mjs",
+    "test:demo": "node --test tests/demo.test.mjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.0",

@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { Linking, Text } from "react-native";
 import { API } from "../api";
-import { Button, Card, Paragraph, Row, Metric } from "../components/ui";
-export default function DeveloperScreen({ api, run, token, notify }) {
+import {
+  Button,
+  Card,
+  Paragraph,
+  Row,
+  Metric,
+  colors,
+  Badge,
+} from "../components/ui";
+export default function DeveloperScreen({ api, run, token, notify, demo }) {
   const [plans, setPlans] = useState([]),
     [keys, setKeys] = useState([]),
     [usage, setUsage] = useState(null),
     [secret, setSecret] = useState("");
+  const [response, setResponse] = useState(null);
+  const [consulting, setConsulting] = useState(false);
   async function refresh() {
     setPlans(await api("/plans"));
     if (token) {
@@ -24,21 +34,72 @@ export default function DeveloperScreen({ api, run, token, notify }) {
           JSON/GeoJSON com procedência, paginação e cota mensal por conta.
           Chaves acessam somente datasets do proprietário.
         </Paragraph>
-        <Row>
-          <Button onPress={() => Linking.openURL(API + "/docs")}>
-            Abrir Swagger
-          </Button>
-          <Button
-            secondary
-            onPress={() => Linking.openURL(API + "/openapi.json")}
-          >
-            Contrato OpenAPI
-          </Button>
-        </Row>
+        {demo ? (
+          <>
+            <Badge>API LOCAL SIMULADA</Badge>
+            <Paragraph>
+              Chaves fictícias, sem acesso externo. Execute uma consulta para
+              ver um exemplo GeoJSON e atualizar o contador de uso.
+            </Paragraph>
+            <Button
+              disabled={consulting || !keys.some((k) => !k.revoked)}
+              onPress={() =>
+                run(async () => {
+                  setConsulting(true);
+                  try {
+                    setResponse(await api("/developer/lst"));
+                    await refresh();
+                  } finally {
+                    setConsulting(false);
+                  }
+                })
+              }
+            >
+              Executar GET /developer/lst
+            </Button>
+            {!keys.some((k) => !k.revoked) && (
+              <Paragraph muted>
+                Crie uma chave na seção abaixo para liberar a consulta de
+                exemplo.
+              </Paragraph>
+            )}
+            {response && (
+              <>
+                <Text
+                  selectable
+                  style={{
+                    color: colors.petrol,
+                    fontFamily: "monospace",
+                    fontSize: 12,
+                    lineHeight: 20,
+                  }}
+                >
+                  {JSON.stringify(response, null, 2)}
+                </Text>
+                <Button secondary onPress={() => setResponse(null)}>
+                  Limpar resposta
+                </Button>
+              </>
+            )}
+          </>
+        ) : (
+          <Row>
+            <Button onPress={() => Linking.openURL(API + "/docs")}>
+              Abrir Swagger
+            </Button>
+            <Button
+              secondary
+              onPress={() => Linking.openURL(API + "/openapi.json")}
+            >
+              Contrato OpenAPI
+            </Button>
+          </Row>
+        )}
         <Text
           selectable
           style={{
             fontFamily: "monospace",
+            color: colors.petrol,
             fontSize: 12,
             lineHeight: 22,
           }}
@@ -72,7 +133,9 @@ export default function DeveloperScreen({ api, run, token, notify }) {
             <Paragraph>
               Copie agora. A chave não será exibida novamente.
             </Paragraph>
-            <Text selectable>{secret}</Text>
+            <Text selectable style={{ color: colors.petrol }}>
+              {secret}
+            </Text>
             <Button secondary onPress={() => setSecret("")}>
               Ocultar chave
             </Button>

@@ -9,10 +9,12 @@ export function mapHtml(features, layer = "lst", drawing = false) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>${LEAFLET_CSS}</style>
   <style>
-    html, body, #map { height: 100%; margin: 0; font-family: system-ui; }
+    html, body, #map { height: 100%; margin: 0; font-family: monospace; background: #111C18; }
+    .leaflet-control-zoom a { background: #111C18; color: #F0F7F3; border-color: #20392D; }
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #111C18; color: #F0F7F3; }
     #hint {
       position: absolute; bottom: 28px; left: 12px; z-index: 1000;
-      background: white; padding: 10px; border-radius: 8px;
+      background: #111C18; color: #F0F7F3; border: 1px solid #20392D; padding: 12px; border-radius: 20px;
       max-width: 65%; font-size: 12px;
     }
   </style>
@@ -52,6 +54,9 @@ export function mapHtml(features, layer = "lst", drawing = false) {
       return palette[Math.min(4, Math.floor(level * 5))];
     }
 
+    if (points.length) {
+      map.fitBounds(L.latLngBounds(points.map(f => [f.geometry.coordinates[1], f.geometry.coordinates[0]])), { padding: [35, 35], maxZoom: 14 });
+    }
     points.forEach(function (feature) {
       const coordinates = feature.geometry.coordinates;
       const properties = feature.properties || {};
@@ -64,7 +69,7 @@ export function mapHtml(features, layer = "lst", drawing = false) {
       }).addTo(map);
       const text = document.createElement('div');
       const unit = ['lst', 'predicted_lst', 'error'].includes(key) ? ' °C' : '';
-      text.textContent = key.toUpperCase() + ': ' + value.toFixed(2) + unit;
+      text.textContent = (properties.region ? properties.region + ' · ' : '') + key.toUpperCase() + ': ' + value.toFixed(2) + unit;
       marker.bindPopup(text);
       marker.on('click', function () {
         notify({ type: 'pixel', coordinates, properties });

@@ -7,6 +7,7 @@ export default function AccountScreen({
   onLogin,
   onLogout,
   notify,
+  demo,
 }) {
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
@@ -17,6 +18,12 @@ export default function AccountScreen({
   };
   return (
     <Card title={account ? "Sua conta" : "Acesse seu espaço de pesquisa"}>
+      {demo && (
+        <Paragraph muted>
+          Conta fictícia de demonstração. Senhas e emails digitados aqui não são
+          armazenados nem enviados a um servidor.
+        </Paragraph>
+      )}
       {account ? (
         <>
           <Paragraph>
@@ -39,6 +46,11 @@ export default function AccountScreen({
             onChangeText={setPassword}
             secureTextEntry
           />
+          {demo && (
+            <Button onPress={() => run(() => onLogin("geovision-local-demo"))}>
+              Entrar como pesquisador demo
+            </Button>
+          )}
           <Row>
             <Button
               onPress={() =>
@@ -65,8 +77,9 @@ export default function AccountScreen({
             </Button>
           </Row>
           <Paragraph>
-            Na instalação Docker local, o email chega ao Mailpit em
-            localhost:8025. Copie o código abaixo.
+            {demo
+              ? "Use dados fictícios. Nenhum email é enviado; o código da demo é DEMO-2026. A conta demonstra os recursos de administrador."
+              : "Na instalação Docker local, o email chega ao Mailpit em localhost:8025. Copie o código abaixo."}
           </Paragraph>
           <Field
             label="Código recebido por email"

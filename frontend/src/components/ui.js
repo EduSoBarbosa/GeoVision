@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -9,15 +10,20 @@ import {
 } from "react-native";
 
 export const colors = {
-  forest: "#123C32",
-  petrol: "#154C5A",
-  lime: "#C6E6A9",
-  ink: "#213C35",
-  muted: "#667C74",
-  paper: "#F1F5EF",
-  border: "#DCE5DD",
-  danger: "#9B352F",
+  forest: "#39E58C",
+  petrol: "#8FF5BD",
+  lime: "#39E58C",
+  ink: "#F0F7F3",
+  muted: "#9BB3A7",
+  paper: "#080F0D",
+  border: "rgba(255,255,255,0.12)",
+  danger: "#FF727B",
+  surface: "#111C18",
+  elevated: "#20392D",
+  body: "#B6C8BF",
 };
+const heading = Platform.OS === "web" ? "Manrope, sans-serif" : undefined;
+const mono = Platform.OS === "web" ? '"Geist Mono", monospace' : "monospace";
 export function Button({
   children,
   onPress,
@@ -25,26 +31,42 @@ export function Button({
   disabled = false,
   danger = false,
 }) {
+  const [focused, setFocused] = React.useState(false);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={({ pressed, hovered }) => [
         styles.button,
         {
           backgroundColor: danger
-            ? colors.danger
+            ? "#3B1F25"
             : secondary
-              ? "#E7EDE5"
-              : colors.petrol,
+              ? hovered
+                ? colors.elevated
+                : "transparent"
+              : "#F0F7F3",
+          borderColor: focused
+            ? colors.petrol
+            : danger
+              ? colors.danger
+              : colors.border,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
           opacity: disabled ? 0.45 : pressed ? 0.75 : 1,
         },
       ]}
     >
       <Text
-        style={{ color: secondary ? colors.ink : "white", fontWeight: "600" }}
+        style={{
+          color: danger ? colors.danger : secondary ? colors.ink : colors.paper,
+          fontWeight: "700",
+          fontSize: 14,
+          fontFamily: heading,
+        }}
       >
         {children}
       </Text>
@@ -59,8 +81,9 @@ export function Field({
   secureTextEntry = false,
   ...props
 }) {
+  const [focused, setFocused] = React.useState(false);
   return (
-    <View style={{ gap: 7, marginBottom: 14 }}>
+    <View style={{ gap: 8, marginBottom: 16, flexShrink: 1 }}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
         accessibilityLabel={label}
@@ -69,8 +92,15 @@ export function Field({
         multiline={multiline}
         secureTextEntry={secureTextEntry}
         autoCapitalize="none"
+        placeholderTextColor={colors.muted}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         style={[
           styles.input,
+          focused && {
+            borderColor: colors.petrol,
+            backgroundColor: "rgba(255,255,255,0.15)",
+          },
           multiline && { minHeight: 115, textAlignVertical: "top" },
         ]}
         {...props}
@@ -96,7 +126,14 @@ export function Paragraph({ children, muted = false }) {
 export function Badge({ children }) {
   return (
     <View style={styles.badge}>
-      <Text style={{ color: colors.forest, fontSize: 12, fontWeight: "600" }}>
+      <Text
+        style={{
+          color: colors.lime,
+          fontSize: 11,
+          fontFamily: mono,
+          lineHeight: 18,
+        }}
+      >
         {children}
       </Text>
     </View>
@@ -107,7 +144,7 @@ export function Row({ children }) {
 }
 export function Metric({ label, value, note }) {
   return (
-    <Card style={{ flexGrow: 1, minWidth: 150 }}>
+    <Card style={{ flexGrow: 1, flexBasis: 220, minWidth: 0 }}>
       <Text style={styles.label}>{label}</Text>
       <Text style={styles.metric}>{value}</Text>
       {note && <Paragraph muted>{note}</Paragraph>}
@@ -123,45 +160,63 @@ export function Loading() {
 }
 export const styles = StyleSheet.create({
   button: {
-    minHeight: 44,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 9,
+    minHeight: 52,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     marginVertical: 3,
+    borderWidth: 1,
+    ...Platform.select({
+      web: { transition: "background-color 300ms ease, transform 100ms ease" },
+    }),
   },
-  label: { color: colors.ink, fontSize: 13, fontWeight: "600" },
+  label: {
+    color: colors.muted,
+    fontSize: 12,
+    fontFamily: mono,
+    lineHeight: 20,
+  },
   input: {
     borderWidth: 1,
-    borderColor: "#A7BAB0",
-    borderRadius: 9,
-    padding: 12,
-    backgroundColor: "white",
+    borderColor: colors.border,
+    borderRadius: 24,
+    padding: 20,
+    backgroundColor: "rgba(255,255,255,0.08)",
     color: colors.ink,
-    minHeight: 46,
+    minHeight: 60,
+    fontFamily: mono,
+    fontSize: 13,
+    ...Platform.select({ web: { outlineStyle: "none" } }),
   },
   card: {
-    padding: 22,
+    padding: 24,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
-    backgroundColor: "white",
-    marginBottom: 16,
-    gap: 8,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    marginBottom: 24,
+    gap: 12,
   },
   cardTitle: {
     color: colors.ink,
-    fontWeight: "700",
-    fontSize: 18,
+    fontWeight: "500",
+    fontFamily: heading,
+    fontSize: 20,
     marginBottom: 4,
   },
-  paragraph: { color: colors.ink, fontSize: 14, lineHeight: 23 },
+  paragraph: {
+    color: colors.body,
+    fontFamily: mono,
+    fontSize: 13,
+    lineHeight: 24,
+  },
   badge: {
     alignSelf: "flex-start",
-    backgroundColor: "#E7F0D9",
-    borderRadius: 20,
-    paddingHorizontal: 10,
+    backgroundColor: "rgba(57,229,140,0.12)",
+    borderRadius: 4,
+    paddingHorizontal: 12,
     paddingVertical: 5,
   },
   row: {
@@ -172,8 +227,9 @@ export const styles = StyleSheet.create({
   },
   metric: {
     color: colors.petrol,
-    fontSize: 30,
-    fontWeight: "700",
+    fontSize: 36,
+    fontFamily: heading,
+    fontWeight: "500",
     marginTop: 8,
   },
 });

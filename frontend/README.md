@@ -44,3 +44,39 @@ página encerra a sessão local. O botão Sair não revoga JWTs já emitidos no 
 
 `npm run check` verifica formatação; `npm run build` exporta a web.
 O estado de testes em navegador/dispositivo está em `../ESTADO_ATUAL.md`.
+
+## Identidade visual
+
+A interface segue o `DESIGN.md` da raiz: superfícies escuras, gradiente verde
+na abertura, acentos menta, cartões arredondados e navegação superior com menu
+compacto nas telas menores. A implementação mantém React Native, Expo e Leaflet.
+Na web, Manrope e Geist Mono são carregadas pelo Google Fonts; sem acesso à
+rede, a interface usa as fontes alternativas sans-serif e monospace.
+
+O botão “Explorar o mapa” leva à seção de exploração. A legenda acompanha a
+camada selecionada, preservando a escala térmica e os fluxos da API existentes.
+
+## Demonstração interativa
+
+A demonstração é o modo padrão. Execute `npm run web` para usá-la sem backend.
+A conta fictícia de pesquisador já inicia conectada. O roteiro no topo guia
+mapa → dados → treinamento → analytics → visitas → API.
+
+- Mapa: 300 pontos sintéticos, três regiões, quatro anos e cenários de vegetação.
+- Dados: catálogo fictício filtrável, coleta com recorte, fila simulada, CSV de exemplo,
+  importação validada e exportações CSV/GeoJSON.
+- Modelos: experimentos preenchidos, progresso de treinamento simulado, ativação
+  local, laboratório de índices, previsão por fórmula e contribuições explicadas.
+- Visitas: desenho no mapa, criação, edição, datas, notas, status e exclusão.
+- API: chaves fictícias, revogação e consulta local com resposta JSON e contador.
+
+Datasets, visitas, modelos e tarefas ficam no `localStorage` na web. O botão
+“Reiniciar demonstração” restaura os exemplos após confirmação. No aplicativo
+nativo, a demo mantém o estado apenas enquanto o processo estiver aberto.
+Todos os resultados analíticos, métricas e contas são fictícios. O mapa-base
+OpenStreetMap e as fontes web ainda exigem internet; os pontos e controles são locais.
+Nenhuma senha ou chave real é necessária. Downloads de arquivos continuam web-only.
+
+Para usar a API real, configure `EXPO_PUBLIC_DEMO_MODE=false` antes de iniciar
+ou compilar o Expo, junto de `EXPO_PUBLIC_API_URL`. A seleção do modo é incorporada
+no bundle. Execute `npm run test:demo` para testar os fluxos locais.

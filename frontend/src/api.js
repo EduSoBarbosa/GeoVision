@@ -1,9 +1,11 @@
+import { DEMO_MODE, demoRequest } from "./demo";
 export const API = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8000";
 
 export async function request(
   path,
   { token = "", method = "GET", body, raw = false } = {},
 ) {
+  if (DEMO_MODE) return demoRequest(path, { token, method, body, raw });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 45000);
   try {
